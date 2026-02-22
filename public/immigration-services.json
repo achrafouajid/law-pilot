@@ -1,0 +1,295 @@
+{
+    "immigration_services": {
+        "family_based_immigration": {
+            "services": [
+                {
+                    "case_type": "Green Card for spouse located in the U.S.",
+                    "attorney_fees_usd": {
+                        "starting_from": 3000
+                    }
+                },
+                {
+                    "case_type": "Green Card for family member located in the U.S.",
+                    "attorney_fees_usd": {
+                        "starting_from": 3000
+                    }
+                },
+                {
+                    "case_type": "Green Card for spouse located outside the U.S.",
+                    "attorney_fees_usd": {
+                        "starting_from": 3000
+                    }
+                },
+                {
+                    "case_type": "Green Card for family member located outside the U.S.",
+                    "attorney_fees_usd": {
+                        "starting_from": 2900
+                    }
+                },
+                {
+                    "case_type": "Petition for Alien Relative (visa not available yet)",
+                    "attorney_fees_usd": {
+                        "starting_from": 1500
+                    }
+                },
+                {
+                    "case_type": "Fiancé(e) Visa",
+                    "attorney_fees_usd": {
+                        "starting_from": 3000
+                    }
+                },
+                {
+                    "case_type": "Green Card for Fiancé(e) after marriage",
+                    "attorney_fees_usd": {
+                        "starting_from": 2500
+                    }
+                },
+                {
+                    "case_type": "Waiver for unlawful presence & consular process",
+                    "attorney_fees_usd": {
+                        "starting_from": 5500
+                    }
+                },
+                {
+                    "case_type": "Re-entry Permit",
+                    "attorney_fees_usd": {
+                        "starting_from": 1500
+                    }
+                },
+                {
+                    "case_type": "Work Permit (Initial and Renewal)",
+                    "attorney_fees_usd": {
+                        "starting_from": 500
+                    }
+                },
+                {
+                    "case_type": "Request for Additional Evidence (RFE)",
+                    "attorney_fees_usd": {
+                        "starting_from": 1500
+                    }
+                },
+                {
+                    "case_type": "Consular Processing",
+                    "attorney_fees_usd": {
+                        "starting_from": 1700,
+                        "additional_family_member_fee": 1200
+                    }
+                }
+            ]
+        },
+        "employment_based_immigration": {
+            "services": [
+                {
+                    "case_type": "Green Card for Professionals with National Interest Waiver",
+                    "attorney_fees_usd": {
+                        "starting_from": 13000
+                    }
+                },
+                {
+                    "case_type": "Green Card for Extraordinary Ability (EB-1A)",
+                    "attorney_fees_usd": {
+                        "starting_from": 14000
+                    }
+                },
+                {
+                    "case_type": "Green Card for International Executives (EB-1C)",
+                    "attorney_fees_usd": {
+                        "starting_from": 16000
+                    }
+                },
+                {
+                    "case_type": "Green Card for Special Immigrants (EB-3)",
+                    "attorney_fees_usd": {
+                        "starting_from": 14000
+                    }
+                },
+                {
+                    "case_type": "Green Card for Skilled Workers (EB-3) including PERM advertising cost",
+                    "attorney_fees_usd": {
+                        "starting_from": 5000
+                    }
+                },
+                {
+                    "case_type": "Premium Processing (where available)",
+                    "attorney_fees_usd": {
+                        "flat_fee": 700
+                    }
+                },
+                {
+                    "case_type": "Request for Additional Evidence (RFE)",
+                    "attorney_fees_usd": {
+                        "starting_from": 1500
+                    }
+                }
+            ]
+        },
+        "work_and_investor_visas": {
+            "services": [
+                {
+                    "case_type": "H-1B Work Visa",
+                    "attorney_fees_usd": {
+                        "starting_from": 5500
+                    }
+                },
+                {
+                    "case_type": "H-1B Transfer or Extension",
+                    "attorney_fees_usd": {
+                        "starting_from": 3500
+                    }
+                },
+                {
+                    "case_type": "L-1 Visa for Intra-Company Transfers",
+                    "attorney_fees_usd": {
+                        "starting_from": 7500
+                    }
+                },
+                {
+                    "case_type": "E-2 Investor Visa",
+                    "attorney_fees_usd": {
+                        "starting_from": 8500
+                    }
+                },
+                {
+                    "case_type": "O Visa for Extraordinary Ability",
+                    "attorney_fees_usd": {
+                        "starting_from": 9900
+                    }
+                },
+                {
+                    "case_type": "R Visa for Religious Workers",
+                    "attorney_fees_usd": {
+                        "starting_from": 5000
+                    }
+                },
+                {
+                    "case_type": "P Visa for Artists / Athletes",
+                    "attorney_fees_usd": {
+                        "starting_from": 5000
+                    }
+                }
+            ]
+        },
+        "asylum_and_humanitarian_cases": {
+            "services": [
+                {
+                    "case_type": "Asylum Representation",
+                    "attorney_fees_usd": {
+                        "starting_from": 3000
+                    }
+                },
+                {
+                    "case_type": "USCIS Interview Preparation and Representation",
+                    "attorney_fees_usd": {
+                        "starting_from": 3000
+                    }
+                },
+                {
+                    "case_type": "Work Permit for Asylum Seekers",
+                    "attorney_fees_usd": {
+                        "starting_from": 550
+                    }
+                },
+                {
+                    "case_type": "Credible Fear Interview Preparation",
+                    "attorney_fees_usd": {
+                        "starting_from": 2500
+                    }
+                },
+                {
+                    "case_type": "Asylum Appeal",
+                    "attorney_fees_usd": {
+                        "starting_from": 5500
+                    }
+                },
+                {
+                    "case_type": "Court Representation (Master Hearing)",
+                    "attorney_fees_usd": {
+                        "starting_from": 3500
+                    }
+                },
+                {
+                    "case_type": "Court Representation (Individual Hearing)",
+                    "attorney_fees_usd": {
+                        "starting_from": 9800
+                    }
+                },
+                {
+                    "case_type": "Humanitarian Parole",
+                    "attorney_fees_usd": {
+                        "starting_from": 1500
+                    }
+                },
+                {
+                    "case_type": "Request for Additional Evidence (RFE)",
+                    "attorney_fees_usd": {
+                        "starting_from": 1500
+                    }
+                }
+            ]
+        },
+        "other_immigration_services": {
+            "services": [
+                {
+                    "case_type": "U.S. Citizenship Application",
+                    "attorney_fees_usd": {
+                        "flat_fee": 1500
+                    }
+                },
+                {
+                    "case_type": "Green Card Renewal",
+                    "attorney_fees_usd": {
+                        "flat_fee": 1200
+                    }
+                },
+                {
+                    "case_type": "B-1/B-2 Visitor Visa",
+                    "attorney_fees_usd": {
+                        "flat_fee": 900
+                    }
+                },
+                {
+                    "case_type": "B-1/B-2 Extension",
+                    "attorney_fees_usd": {
+                        "flat_fee": 1500
+                    }
+                },
+                {
+                    "case_type": "J-1 Waiver",
+                    "attorney_fees_usd": {
+                        "starting_from": 4000
+                    }
+                },
+                {
+                    "case_type": "Diversity Visa Lottery Assistance",
+                    "attorney_fees_usd": {
+                        "flat_fee": 500
+                    }
+                },
+                {
+                    "case_type": "Removal of Conditions on Green Card",
+                    "attorney_fees_usd": {
+                        "flat_fee": 2000
+                    }
+                },
+                {
+                    "case_type": "Change of Status",
+                    "attorney_fees_usd": {
+                        "flat_fee": 2000
+                    }
+                },
+                {
+                    "case_type": "Attorney Hourly Charge (Non-litigation)",
+                    "attorney_fees_usd": {
+                        "hourly_rate": 350
+                    }
+                },
+                {
+                    "case_type": "Attorney Hourly Charge (Litigation)",
+                    "attorney_fees_usd": {
+                        "hourly_rate": 500
+                    }
+                }
+            ]
+        }
+    }
+}
