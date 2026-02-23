@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function uploadDocument(file: File, path: string) {
     const { data, error } = await supabase.storage
-        .from('documents')
+        .from('law-pilot-bucket')
         .upload(path, file, {
             cacheControl: '3600',
             upsert: false,
@@ -18,7 +18,7 @@ export async function uploadDocument(file: File, path: string) {
 
 export async function getSignedUrl(path: string) {
     const { data, error } = await supabase.storage
-        .from('documents')
+        .from('law-pilot-bucket')
         .createSignedUrl(path, 60 * 60); // 1 hour
 
     if (error) {
@@ -38,7 +38,7 @@ export async function uploadGuestDocument(file: File, sessionId: string, caseTyp
 
     // 1. Upload to storage
     const { error: storageError } = await supabase.storage
-        .from('documents')
+        .from('law-pilot-bucket')
         .upload(filePath, file);
 
     if (storageError) throw storageError;
@@ -71,7 +71,24 @@ export async function associateGuestDocuments(sessionId: string, userId: string)
     // 2. We assume they all belong to the same case type for the guest flow
     const caseType = guestDocs[0].case_type;
 
-    // 3. Create a new case for the user
+    // 3. Ensure profile exists
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+    if (!profile) {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('profiles').upsert({
+            id: userId,
+            full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0],
+            avatar_url: user?.user_metadata?.avatar_url,
+            state: 'logged in'
+        });
+    }
+
+    // 4. Create a new case for the user
     const { data: caseData, error: caseError } = await supabase
         .from('cases')
         .insert({
@@ -106,4 +123,137 @@ export async function associateGuestDocuments(sessionId: string, userId: string)
         .from('guest_documents')
         .delete()
         .eq('session_id', sessionId);
+}
+
+/**
+ * Uploads files directly for a newly registered user
+ * and creates the associated case and document records.
+ */
+export async function finalizeApplication(
+    userId: string,
+    caseType: string,
+    pendingFiles: { id: string, file: File }[]
+) {
+    if (pendingFiles.length === 0) return;
+
+    // 0. Ensure profile exists (to avoid foreign key violation if trigger hasn't finished)
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+    if (!profile) {
+        // Fetch user metadata to populate profile
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('profiles').upsert({
+            id: userId,
+            full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0],
+            avatar_url: user?.user_metadata?.avatar_url,
+            state: 'logged in'
+        });
+    }
+
+    // 1. Create the case first
+    const { data: caseData, error: caseError } = await supabase
+        .from('cases')
+        .insert({
+            client_id: userId,
+            title: `${caseType} Application`,
+            category: 'immigration',
+            service_type: caseType,
+            status: 'pending',
+        })
+        .select()
+        .single();
+
+    if (caseError) throw caseError;
+
+    // 2. Fetch requirements for this case type to create placeholders for missing docs
+    const { data: requirements } = await supabase
+        .from('document_requirements')
+        .select('*')
+        .eq('case_type', caseType);
+
+    // 3. Upload files and prepare document records
+    const docRecords = [];
+
+    for (const item of pendingFiles) {
+        const fileExt = item.file.name.split('.').pop();
+        const fileName = `${uuidv4()}.${fileExt}`;
+        // Path: users/[userId]/[caseId]/[fileName]
+        const filePath = `users/${userId}/${caseData.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('law-pilot-bucket')
+            .upload(filePath, item.file);
+
+        if (uploadError) {
+            console.error(`Failed to upload ${item.file.name}:`, uploadError);
+            continue;
+        }
+
+        // Find which requirement this file satisfies (if any)
+        // For now we use the name or just create a generic record
+        docRecords.push({
+            case_id: caseData.id,
+            name: item.file.name,
+            file_path: filePath,
+            file_type: item.file.type,
+            status: 'pending'
+        });
+
+        // Mark requirement as satisfied if we can match it
+        // (This logic could be improved with better mapping)
+    }
+
+    // 4. Add placeholders for missing required documents
+    if (requirements) {
+        for (const req of requirements) {
+            // Check if we already uploaded something for this requirement
+            // This is a simple check; in a real app you'd map docId to requirementId
+            const alreadyUploaded = docRecords.some(d => d.name.toLowerCase().includes(req.name.toLowerCase()));
+
+            if (!alreadyUploaded && req.is_required) {
+                // We don't have a file_path yet, but we create the record as a placeholder
+                // This allows the dashboard to show "Missing: [Doc Name]"
+                /* 
+                docRecords.push({
+                    case_id: caseData.id,
+                    name: req.name,
+                    file_path: '', // empty or special value
+                    file_type: '',
+                    status: 'pending'
+                });
+                */
+                // Actually, it's better to only create records for uploaded files
+                // The UI should derive missing docs by comparing case documents with requirements
+            }
+        }
+    }
+
+    // 5. Insert document records into DB
+    if (docRecords.length > 0) {
+        const { error: docError } = await supabase
+            .from('documents')
+            .insert(docRecords);
+
+        if (docError) throw docError;
+    }
+
+    return caseData;
+}
+
+export async function getDocumentRequirements(caseType: string) {
+    const { data, error } = await supabase
+        .from('document_requirements')
+        .select('*')
+        .eq('case_type', caseType);
+
+    if (error) {
+        console.error("Error fetching requirements:", error);
+        return [];
+    }
+
+    return data;
 }

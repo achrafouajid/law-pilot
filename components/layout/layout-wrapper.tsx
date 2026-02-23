@@ -7,9 +7,10 @@ import { useStore } from '@/store/useStore';
 import { Scale, User, LogOut, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Toaster } from 'sonner';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { user, signOut } = useStore();
+  const { user, signOut, fetchUser } = useStore();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -17,10 +18,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isActive = (path: string) => pathname === path;
 
   useEffect(() => {
+    fetchUser();
     const onScroll = () => setIsScrolled(window.scrollY > 16);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [fetchUser]);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ fontFamily: 'var(--font-sans)', backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)' }}>
@@ -204,6 +206,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main id="main-content" className="flex-1">
         {children}
       </main>
+      <Toaster position="top-right" richColors />
 
       {/* ─── Footer ─── */}
       <footer style={{ backgroundColor: '#000042', color: 'rgba(194,221,216,0.8)' }}>

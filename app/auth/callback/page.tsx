@@ -30,19 +30,38 @@ export default function AuthCallback() {
 
                 // Check if we have a pending case or guest documents
                 const state = useStore.getState();
-                if (state.sessionId) {
+                let redirected = false;
+
+                if (state.pendingCase && state.pendingFiles.length > 0) {
+                    console.log("Found pending case and files, finalizing...", state.pendingCase);
+                    try {
+                        const { finalizeApplication } = await import('@/lib/storage');
+                        await finalizeApplication(user.id, state.pendingCase.caseType, state.pendingFiles);
+
+                        // Clear store state
+                        useStore.setState({ pendingCase: null, pendingFiles: [] });
+
+                        router.push("/dashboard?success=application_submitted");
+                        redirected = true;
+                    } catch (err) {
+                        console.error("Failed to finalize application:", err);
+                        router.push("/dashboard?error=app_finalization_failed");
+                        redirected = true;
+                    }
+                } else if (state.sessionId) {
                     console.log("Associating guest documents for session:", state.sessionId);
                     try {
                         await associateGuestDocuments(state.sessionId, user.id);
                         router.push("/dashboard?new_case=success");
+                        redirected = true;
                     } catch (assocError) {
                         console.error("Failed to associate guest docs:", assocError);
                         router.push("/dashboard?error=association_failed");
+                        redirected = true;
                     }
-                } else if (state.pendingCase) {
-                    console.log("Found pending case, associating with user...", state.pendingCase);
-                    router.push("/dashboard?new_case=success");
-                } else {
+                }
+
+                if (!redirected) {
                     router.push("/dashboard");
                 }
             } else {

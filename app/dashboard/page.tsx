@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,55 +8,97 @@ import { Progress } from "@/components/ui/progress";
 import { Divider } from "@/components/ui/divider";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import {
-    Scale, FileText, Clock, CheckCircle2, Bell,
-    Plus, Upload, TrendingUp, ArrowRight, AlertCircle
+    Scale, FileText, Clock, CheckCircle2,
+    Plus, Upload, TrendingUp, ArrowRight
 } from "lucide-react";
 import Link from "next/link";
+import { useStore, type Case } from "@/store/useStore";
+import { supabase } from "@/lib/supabase";
 
-const CASES = [
-    {
-        id: 'IMM-2026-0847',
-        title: 'Family Visa Petition',
-        subtitle: 'Ait Family — K1 Visa',
-        progress: 67,
-        nextStep: 'Biometrics Appointment',
-        dueDate: 'Mar 15, 2026',
-        status: 'In Review' as const,
-        docsReady: 8,
-        docsTotal: 12,
-    },
-    {
-        id: 'REF-2026-0312',
-        title: 'Asylum Application',
-        subtitle: 'Chen — Refugee Status',
-        progress: 42,
-        nextStep: 'Interview Preparation',
-        dueDate: 'Apr 2, 2026',
-        status: 'Pending' as const,
-        docsReady: 5,
-        docsTotal: 14,
-    },
-    {
-        id: 'WRK-2026-1103',
-        title: 'Work Permit Renewal',
-        subtitle: 'Torres — H-1B Extension',
-        progress: 91,
-        nextStep: 'Final Approval',
-        dueDate: 'Mar 8, 2026',
-        status: 'Approved' as const,
-        docsReady: 11,
-        docsTotal: 11,
-    },
-];
+interface DBDocument {
+    id: string;
+    status: string;
+}
 
-const ACTIVITY = [
-    { icon: CheckCircle2, color: '#d8b23d', message: 'Biometrics appointment confirmed', time: '2 hours ago' },
-    { icon: Upload, color: '#54848c', message: 'Document "I-130" uploaded successfully', time: '5 hours ago' },
-    { icon: Bell, color: '#d8b23d', message: 'Deadline reminder: Mar 8 filing due', time: '1 day ago' },
-    { icon: AlertCircle, color: 'hsl(4,70%,52%)', message: 'Action required: Missing passport copy', time: '2 days ago' },
-];
+interface DBCase {
+    id: string;
+    title: string;
+    service_type: string;
+    progress: number;
+    status: string;
+    documents?: DBDocument[];
+}
+
+interface TransformedCase {
+    id: string;
+    title: string;
+    subtitle: string;
+    progress: number;
+    nextStep: string;
+    dueDate: string;
+    status: string;
+    docsReady: number;
+    docsTotal: number;
+}
 
 export default function Dashboard() {
+    const { user, cases, setCases } = useStore();
+    const [isLoading, setIsLoading] = useState(true);
+    const [stats, setStats] = useState({
+        active: 0,
+        pendingDocs: 0,
+        upcomingDates: 0,
+        completedSteps: 0
+    });
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            if (!user) return;
+
+            setIsLoading(true);
+            try {
+                // 1. Fetch cases
+                const { data: casesData, error: casesError } = await supabase
+                    .from('cases')
+                    .select('*, documents(*)')
+                    .eq('client_id', user.id)
+                    .order('created_at', { ascending: false });
+
+                if (casesError) throw casesError;
+
+                // Transform to match local UI expectations if needed
+                const transformedCases = (casesData as DBCase[] || []).map((c: DBCase) => ({
+                    id: c.id,
+                    title: c.title,
+                    subtitle: c.service_type,
+                    progress: c.progress || 0,
+                    nextStep: 'Awaiting Review',
+                    dueDate: 'TBD',
+                    status: c.status === 'pending' ? 'Pending' : c.status === 'in_review' ? 'In Review' : 'Approved',
+                    docsReady: c.documents?.filter((d: DBDocument) => d.status === 'approved').length || 0,
+                    docsTotal: 3, // Default for now
+                }));
+
+                setCases(transformedCases as unknown as Case[]); // Cast to Case[] to match store type
+
+                // 2. Fetch stats (mocked logic based on real data)
+                setStats({
+                    active: casesData?.length || 0,
+                    pendingDocs: (casesData as DBCase[])?.reduce((acc: number, c: DBCase) => acc + (c.documents?.filter((d: DBDocument) => d.status === 'pending').length || 0), 0) || 0,
+                    upcomingDates: 0,
+                    completedSteps: (casesData as DBCase[])?.reduce((acc: number, c: DBCase) => acc + (c.documents?.filter((d: DBDocument) => d.status === 'approved').length || 0), 0) || 0
+                });
+
+            } catch (err) {
+                console.error("Dashboard fetch error:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, [user, setCases]);
+
     return (
         <div style={{ backgroundColor: '#faf9f6', minHeight: 'calc(100vh - 72px)' }}>
 
@@ -67,7 +110,7 @@ export default function Dashboard() {
                     <div className="flex items-end justify-between pb-8">
                         <div>
                             <span className="mono-label block mb-3" style={{ color: 'rgba(220,192,127,0.6)' }}>
-                                CASE DASHBOARD
+                                {user?.role?.toUpperCase() || 'CLIENT'} DASHBOARD
                             </span>
                             <h1
                                 style={{
@@ -79,16 +122,18 @@ export default function Dashboard() {
                                     color: '#faf9f6',
                                 }}
                             >
-                                My Legal Cases
+                                Welcome back, {user?.full_name?.split(' ')[0] || 'User'}
                             </h1>
                             <p className="mt-2 text-[0.9rem]" style={{ color: 'rgba(194,221,216,0.65)' }}>
-                                3 active cases · Last updated 2 hours ago
+                                {stats.active} active cases · {stats.pendingDocs} documents pending
                             </p>
                         </div>
-                        <Button variant="primary" size="md" className="group hidden md:flex mb-2">
-                            <Plus size={16} />
-                            New Case
-                        </Button>
+                        <Link href="/apply">
+                            <Button variant="primary" size="md" className="group hidden md:flex mb-2">
+                                <Plus size={16} />
+                                New Application
+                            </Button>
+                        </Link>
                     </div>
 
                     {/* Stat strip */}
@@ -97,10 +142,10 @@ export default function Dashboard() {
                         style={{ borderTop: '1px solid rgba(194,221,216,0.1)' }}
                     >
                         {[
-                            { label: 'Active Cases', value: '3', Icon: Scale },
-                            { label: 'Pending Docs', value: '4', Icon: FileText },
-                            { label: 'Upcoming Dates', value: '2', Icon: Clock },
-                            { label: 'Completed Steps', value: '18', Icon: CheckCircle2 },
+                            { label: 'Active Cases', value: stats.active, Icon: Scale },
+                            { label: 'Pending Docs', value: stats.pendingDocs, Icon: FileText },
+                            { label: 'Upcoming Dates', value: stats.upcomingDates, Icon: Clock },
+                            { label: 'Completed Steps', value: stats.completedSteps, Icon: CheckCircle2 },
                         ].map(({ label, value, Icon }) => (
                             <div key={label} className="py-4 px-2 text-center">
                                 <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -139,9 +184,22 @@ export default function Dashboard() {
                         </div>
 
                         <div className="flex flex-col gap-5">
-                            {CASES.map((c) => (
-                                <DashboardCaseCard key={c.id} {...c} />
-                            ))}
+                            {isLoading ? (
+                                Array(2).fill(0).map((_, i) => <CardSkeleton key={i} />)
+                            ) : cases.length > 0 ? (
+                                cases.map((c) => (
+                                    <DashboardCaseCard key={c.id} {...(c as unknown as TransformedCase)} />
+                                ))
+                            ) : (
+                                <Card className="p-12 text-center flex flex-col items-center border-dashed border-2">
+                                    <FileText size={48} className="text-[#9d9daa] mb-4 opacity-20" />
+                                    <h3 className="text-xl font-bold text-[#000042] mb-2">No active cases yet</h3>
+                                    <p className="text-[#6b6b7e] mb-6 max-w-[300px]">Start your immigration journey by opening your first case.</p>
+                                    <Link href="/apply">
+                                        <Button variant="primary">Apply for Service</Button>
+                                    </Link>
+                                </Card>
+                            )}
                         </div>
                     </div>
 
@@ -162,33 +220,12 @@ export default function Dashboard() {
                                     <TrendingUp size={14} />
                                     View Timeline
                                 </Button>
-                                <Button variant="outline" size="sm" className="w-full justify-start">
-                                    <Plus size={14} />
-                                    Open New Case
-                                </Button>
-                            </div>
-                        </Card>
-
-                        {/* Recent activity */}
-                        <Card variant="elevated" className="p-6">
-                            <h3 className="mb-5" style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#000042' }}>
-                                Recent Activity
-                            </h3>
-                            <div className="flex flex-col gap-4">
-                                {ACTIVITY.map(({ icon: Icon, color, message, time }, i) => (
-                                    <div key={i} className="flex items-start gap-3">
-                                        <div
-                                            className="mt-0.5 flex items-center justify-center rounded-full shrink-0"
-                                            style={{ width: 28, height: 28, background: `${color}18` }}
-                                        >
-                                            <Icon size={13} style={{ color }} />
-                                        </div>
-                                        <div>
-                                            <p className="text-[0.8rem] leading-snug" style={{ color: '#3a3a4a' }}>{message}</p>
-                                            <p className="text-[0.7rem] mt-0.5 font-mono" style={{ color: '#9d9daa' }}>{time}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                                <Link href="/apply">
+                                    <Button variant="outline" size="sm" className="w-full justify-start">
+                                        <Plus size={14} />
+                                        Open New Case
+                                    </Button>
+                                </Link>
                             </div>
                         </Card>
 
@@ -201,14 +238,24 @@ export default function Dashboard() {
 
 function DashboardCaseCard({
     id, title, subtitle, progress, nextStep, dueDate, status, docsReady, docsTotal,
-}: typeof CASES[0]) {
+}: {
+    id: string;
+    title: string;
+    subtitle: string;
+    progress: number;
+    nextStep: string;
+    dueDate: string;
+    status: string;
+    docsReady: number;
+    docsTotal: number;
+}) {
     const statusBadge: 'info' | 'warning' | 'success' = status === 'In Review' ? 'info' : status === 'Approved' ? 'success' : 'warning';
 
     return (
         <Card variant="elevated" className="p-6 group hover:translate-y-[-2px] transition-transform duration-200">
             <div className="flex flex-wrap items-start gap-3 justify-between mb-4">
                 <div>
-                    <span className="mono-label">{id}</span>
+                    <span className="mono-label">{id?.slice(0, 8).toUpperCase()}</span>
                     <h3
                         className="mt-1"
                         style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', fontWeight: 700, color: '#000042', lineHeight: 1.2, letterSpacing: '-0.02em' }}
@@ -239,11 +286,11 @@ function DashboardCaseCard({
                 <div className="flex items-center gap-1.5">
                     <FileText size={13} style={{ color: '#54848c' }} />
                     <span className="text-[0.8rem]" style={{ color: '#6b6b7e' }}>
-                        {docsReady}/{docsTotal} documents ready
+                        {docsReady}/{docsTotal} documents verified
                     </span>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="sm">View Case</Button>
+                    <Button variant="outline" size="sm">View Details</Button>
                     <Button variant="secondary" size="sm">
                         <Upload size={12} />
                         Upload

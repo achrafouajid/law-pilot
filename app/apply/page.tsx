@@ -8,15 +8,15 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import {
     ArrowRight, UploadCloud, CheckCircle2, FileText,
-    ChevronLeft, Search, Shield, Info, File, X
+    ChevronLeft, Search, Shield, File, X
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "@/store/useStore";
 import servicesData from "@/public/immigration-services.json";
-import { uploadGuestDocument } from "@/lib/storage";
 import { v4 as uuidv4 } from 'uuid';
-import { toast } from "sonner"; // Assuming sonner is available or will be added
+import { toast } from "sonner";
+import { finalizeApplication } from "@/lib/storage";
 
 // Types derived from JSON
 type CategoryKey = keyof typeof servicesData.immigration_services;
@@ -50,15 +50,15 @@ function ApplyContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const initialCategory = searchParams.get("service") as CategoryKey | null;
-    const { setPendingCase } = useStore();
+    const { user, setPendingCase, pendingFiles, setPendingFiles, sessionId, setSessionId } = useStore();
 
     // -- State --
     const [step, setStep] = useState<1 | 2>(1);
     const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(initialCategory || null);
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const { sessionId, setSessionId } = useStore();
-    const [uploadingId, setUploadingId] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [requirements, setRequirements] = useState<{ id: string, name: string, category: string }[]>([]);
 
     // Initialize session ID if not present
     useEffect(() => {
@@ -68,14 +68,38 @@ function ApplyContent() {
         }
     }, [sessionId, setSessionId]);
 
-    // Fake file state
-    const [files, setFiles] = useState<{ id: string; name: string; size: number; requiredType: string; uploaded: boolean }[]>([
-        { id: "doc-1", name: "Passport (Biographical Page)", size: 0, requiredType: "Identification", uploaded: false },
-        { id: "doc-2", name: "Birth Certificate", size: 0, requiredType: "Civil Document", uploaded: false },
-        { id: "doc-3", name: "Previous Visa / Exit Stamps (if any)", size: 0, requiredType: "Supporting", uploaded: false },
-    ]);
+    // Fetch requirements when service is selected
+    useEffect(() => {
+        if (selectedService) {
+            const fetchRequirements = async () => {
+                const { getDocumentRequirements } = await import("@/lib/storage");
+                const reqs = await getDocumentRequirements(selectedService.case_type);
+                if (reqs && reqs.length > 0) {
+                    setRequirements(reqs.map(r => ({ id: r.id, name: r.name, category: r.category })));
+                } else {
+                    // Fallback to defaults if no requirements found in DB
+                    setRequirements([
+                        { id: "doc-1", name: "Passport (Biographical Page)", category: "Identification" },
+                        { id: "doc-2", name: "Birth Certificate", category: "Civil Document" },
+                        { id: "doc-3", name: "Previous Visa / Exit Stamps (if any)", category: "Supporting" },
+                    ]);
+                }
+            };
+            fetchRequirements();
+        }
+    }, [selectedService]);
 
     // -- Derived Data --
+    const checklist = useMemo(() => {
+        return requirements.map(f => {
+            const pending = pendingFiles.find(p => p.id === f.id);
+            if (pending) {
+                return { ...f, uploaded: true, name: pending.file.name, requiredType: f.category };
+            }
+            return { ...f, uploaded: false, requiredType: f.category };
+        });
+    }, [requirements, pendingFiles]);
+
     const allServices = useMemo(() => {
         if (!selectedCategory) return [];
         return servicesData.immigration_services[selectedCategory].services as Service[];
@@ -86,8 +110,8 @@ function ApplyContent() {
         return allServices.filter(s => s.case_type.toLowerCase().includes(searchQuery.toLowerCase()));
     }, [allServices, searchQuery]);
 
-    const progressCount = files.filter(f => f.uploaded).length;
-    const progressPercent = (progressCount / files.length) * 100;
+    const progressCount = checklist.filter(f => f.uploaded).length;
+    const progressPercent = (progressCount / checklist.length) * 100;
 
     // -- Handlers --
     const handleServiceSelect = (service: Service) => {
@@ -96,44 +120,52 @@ function ApplyContent() {
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const handleRealUpload = async (docId: string, file: File) => {
-        if (!sessionId || !selectedService) return;
+    const handleFileSelection = (docId: string, file: File) => {
+        if (!selectedService) return;
 
-        setUploadingId(docId);
-        try {
-            const filePath = await uploadGuestDocument(file, sessionId, selectedService.case_type);
+        // Store the file in Zustand (non-persisted)
+        const updatedPending = [...pendingFiles.filter(p => p.id !== docId), {
+            id: docId,
+            file,
+            caseType: selectedService.case_type
+        }];
+        setPendingFiles(updatedPending);
 
-            setFiles(prev => prev.map(f => f.id === docId ? {
-                ...f,
-                uploaded: true,
-                name: file.name,
-                path: filePath // store the path for later reference
-            } : f));
-
-            toast.success(`${file.name} uploaded successfully`);
-        } catch (error) {
-            console.error("Upload failed:", error);
-            toast.error("Failed to upload document");
-        } finally {
-            setUploadingId(null);
-        }
+        toast.success(`${file.name} selected`);
     };
 
-    const handleFakeRemove = (docId: string) => {
-        setFiles(prev => prev.map(f => f.id === docId ? { ...f, uploaded: false, name: f.name.replace("uploaded_", "").replace(".pdf", "") } : f));
+    const handleRemove = (docId: string) => {
+        setPendingFiles(pendingFiles.filter(p => p.id !== docId));
     };
 
-    const submitApplication = () => {
-        // Save to global store so we can retrieve it after login
-        if (selectedService) {
-            setPendingCase({
-                serviceId: selectedCategory as string,
-                caseType: selectedService.case_type,
-                files: files.map(f => ({ id: f.id, name: f.name, uploaded: f.uploaded })),
-            });
+    const submitApplication = async () => {
+        if (!selectedService) return;
+
+        // Save to global store so we can retrieve it after login (if needed)
+        setPendingCase({
+            serviceId: selectedCategory as string,
+            caseType: selectedService.case_type,
+            files: checklist.map(f => ({ id: f.id, name: f.name, uploaded: f.uploaded })),
+        });
+
+        if (user) {
+            setIsSubmitting(true);
+            try {
+                await finalizeApplication(user.id, selectedService.case_type, pendingFiles);
+                setPendingCase(null);
+                setPendingFiles([]);
+                toast.success("Your application has been submitted successfully!");
+                router.push("/dashboard");
+            } catch (error) {
+                console.error("Failed to submit application:", error);
+                toast.error("Failed to submit application. Please try again.");
+            } finally {
+                setIsSubmitting(false);
+            }
+        } else {
+            // Redirect to signup
+            router.push("/signup?intent=apply");
         }
-        // Redirect to signup
-        router.push("/signup?intent=apply");
     };
 
     return (
@@ -284,38 +316,46 @@ function ApplyContent() {
                         <Card className="bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.08)] p-6 md:p-8 mb-8 backdrop-blur-sm">
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                                 <div>
-                                    <h1 className="text-2xl md:text-3xl font-serif font-bold text-white mb-2 tracking-[-0.02em]">
+                                    <h1 className="text-3xl md:text-4xl font-serif font-bold text-white mb-2 tracking-[-0.03em]">
                                         {selectedService.case_type}
                                     </h1>
-                                    <span className="text-[#c2ddd8] text-sm font-medium opacity-80">
-                                        {CATEGORIES.find(c => c.id === selectedCategory)?.label}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="teal">
+                                            {CATEGORIES.find(c => c.id === selectedCategory)?.label}
+                                        </Badge>
+                                        <span className="text-[#9d9daa] text-[0.85rem] font-medium">
+                                            Case ID: {sessionId?.slice(0, 8).toUpperCase()}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 bg-[rgba(84,132,140,0.1)] text-[#c2ddd8] px-3 py-1.5 rounded-md border border-[rgba(84,132,140,0.2)]">
-                                    <Info size={14} />
-                                    <span className="text-[0.8rem] font-medium">Auto-saved to temporary session</span>
+                                <div className="flex flex-col items-end gap-2">
+                                    <div className="flex items-center gap-2 bg-[rgba(216,178,61,0.1)] text-[#d8b23d] px-3 py-1.5 rounded-full border border-[rgba(216,178,61,0.2)]">
+                                        <Shield size={14} />
+                                        <span className="text-[0.75rem] font-bold uppercase tracking-wider">Secure Upload</span>
+                                    </div>
+                                    <span className="text-[0.7rem] text-[#9d9daa] opacity-60 italic">Your data is encrypted in transit</span>
                                 </div>
                             </div>
                         </Card>
 
                         {/* Document Checklist */}
-                        <h2 className="text-xl font-serif font-bold text-white mb-4">Initial Document Checklist</h2>
-                        <p className="text-[#9d9daa] text-sm mb-6">
-                            Please upload clear, legible copies of the following documents. You can upload more later, but these are required to open your case file.
+                        <h2 className="text-2xl font-serif font-bold text-white mb-2">Required Documentation</h2>
+                        <p className="text-[#9d9daa] text-[0.95rem] mb-8 leading-relaxed max-w-[600px]">
+                            To provide the best legal strategy, please provide clear, original-quality digital copies (PDF or high-res JPG) of the items below.
                         </p>
 
                         {/* Progress */}
                         <div className="mb-8">
                             <div className="flex justify-between text-xs font-bold text-[#b6912c] mb-2 uppercase tracking-wide">
                                 <span>Upload Progress</span>
-                                <span>{progressCount} of {files.length} Completed</span>
+                                <span>{progressCount > 0 ? `${Math.floor(progressPercent)}%` : '0%'}</span>
                             </div>
-                            <Progress value={progressPercent} variant="gold" className="h-2 bg-[rgba(255,255,255,0.1)]" />
+                            <Progress value={progressPercent} showValue={false} variant="gold" className="h-2 bg-[rgba(255,255,255,0.1)]" />
                         </div>
 
                         {/* Document List */}
                         <div className="space-y-4 mb-10">
-                            {files.map(doc => (
+                            {checklist.map(doc => (
                                 <Card
                                     key={doc.id}
                                     className={`border transition-all duration-300 ${doc.uploaded
@@ -348,7 +388,7 @@ function ApplyContent() {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => handleFakeRemove(doc.id)}
+                                                    onClick={() => handleRemove(doc.id)}
                                                     className="text-[#9d9daa] hover:text-[#ff5c5c] hover:bg-[rgba(255,92,92,0.1)] text-xs h-8"
                                                 >
                                                     <X size={13} className="mr-1.5" /> Remove
@@ -362,22 +402,17 @@ function ApplyContent() {
                                                         className="hidden"
                                                         onChange={(e) => {
                                                             const file = e.target.files?.[0];
-                                                            if (file) handleRealUpload(doc.id, file);
+                                                            if (file) handleFileSelection(doc.id, file);
                                                         }}
                                                     />
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        disabled={uploadingId === doc.id}
                                                         className="text-white border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)] w-full md:w-auto h-9"
                                                         onClick={() => document.getElementById(doc.id)?.click()}
                                                     >
-                                                        {uploadingId === doc.id ? (
-                                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                                                        ) : (
-                                                            <UploadCloud size={14} className="mr-2" />
-                                                        )}
-                                                        {uploadingId === doc.id ? "Uploading..." : "Upload File"}
+                                                        <UploadCloud size={14} className="mr-2" />
+                                                        Upload File
                                                     </Button>
                                                 </div>
                                             )}
@@ -400,8 +435,9 @@ function ApplyContent() {
                                 size="lg"
                                 className="w-full md:w-auto shrink-0 font-bold bg-[#d8b23d] text-[#000042] hover:bg-[#dcc07f]"
                                 onClick={submitApplication}
+                                disabled={isSubmitting}
                             >
-                                Create Account & Submit <ArrowRight size={16} className="ml-2" />
+                                {isSubmitting ? "Submitting..." : (user ? "Submit my case" : "Create Account & Submit")} <ArrowRight size={16} className="ml-2" />
                             </Button>
                         </div>
 

@@ -1,16 +1,26 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { useStore } from "@/store/useStore";
+import { associateGuestDocuments, finalizeApplication } from "@/lib/storage";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Divider } from "@/components/ui/divider";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { Scale, Mail, Lock, User, ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
 export default function Signup() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const intent = searchParams.get('intent');
+
     const [form, setForm] = useState({ name: '', email: '', password: '' });
     const [isLoading, setIsLoading] = useState(false);
+    const { fetchUser, sessionId, pendingCase, pendingFiles, setPendingCase, setPendingFiles } = useStore();
 
     const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -18,7 +28,57 @@ export default function Signup() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setTimeout(() => setIsLoading(false), 1500);
+
+        try {
+            const { data, error } = await supabase.auth.signUp({
+                email: form.email,
+                password: form.password,
+                options: {
+                    data: {
+                        full_name: form.name,
+                    }
+                }
+            });
+
+            if (error) throw error;
+
+            if (data.user) {
+                toast.success("Account created successfully!");
+
+                // If they came from the apply flow, associate their documents
+                if (intent === 'apply' && pendingCase) {
+                    try {
+                        // Use the new finalization flow for deferred files
+                        await finalizeApplication(data.user.id, pendingCase.caseType, pendingFiles);
+
+                        // Clear pending state
+                        setPendingCase(null);
+                        setPendingFiles([]);
+
+                        toast.success("Your application has been submitted successfully!");
+                    } catch (assocError) {
+                        console.error("Failed to finalize application:", assocError);
+                        toast.error("Account created, but your application failed to submit. Please contact support.");
+                    }
+                } else if (intent === 'apply' && sessionId) {
+                    // Fallback for older guest flow if needed
+                    try {
+                        await associateGuestDocuments(sessionId, data.user.id);
+                        toast.success("Your application has been saved to your account.");
+                    } catch (assocError) {
+                        console.error("Failed to associate documents:", assocError);
+                    }
+                }
+
+                await fetchUser();
+                router.push("/dashboard");
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to create account";
+            toast.error(message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

@@ -36,7 +36,7 @@ const Progress = forwardRef<HTMLDivElement, ProgressProps>(
                         )}
                         {showValue && (
                             <span className="font-mono text-[0.75rem] text-[#d8b23d] tabular-nums">
-                                {clampedValue}%
+                                {Math.floor(clampedValue)}%
                             </span>
                         )}
                     </div>

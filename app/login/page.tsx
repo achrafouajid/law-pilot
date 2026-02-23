@@ -7,17 +7,41 @@ import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { Scale, Mail, Lock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { useStore } from "@/store/useStore";
+import { toast } from "sonner";
 
 export default function Login() {
+    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const { fetchUser } = useStore();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        // auth logic here
-        setTimeout(() => setIsLoading(false), 1500);
+
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (error) throw error;
+
+            if (data.user) {
+                toast.success("Signed in successfully!");
+                await fetchUser();
+                router.push("/dashboard");
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to sign in";
+            toast.error(message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
