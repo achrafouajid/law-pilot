@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
@@ -14,6 +14,14 @@ import { Scale, Mail, Lock, User, ArrowRight, CheckCircle2 } from "lucide-react"
 import Link from "next/link";
 
 export default function Signup() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-white" />}>
+            <SignupContent />
+        </Suspense>
+    );
+}
+
+function SignupContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const intent = searchParams.get('intent');
