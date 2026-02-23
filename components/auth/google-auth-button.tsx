@@ -11,10 +11,15 @@ export function GoogleAuthButton() {
     const handleGoogleLogin = async () => {
         setIsLoading(true);
         try {
+            // Determine the base URL based on environment
+            const baseUrl = typeof window !== 'undefined' && window.location.origin.includes('localhost')
+                ? 'http://localhost:3000'
+                : 'https://law-pilot.netlify.app';
+
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback`,
+                    redirectTo: `${baseUrl}/auth/callback`,
                 },
             });
 
