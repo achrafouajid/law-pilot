@@ -40,7 +40,7 @@ const CATEGORIES: { id: CategoryKey; label: string }[] = [
 
 export default function ApplyPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen hero-bg-dark pt-[72px]" />}>
+        <Suspense fallback={<div className="min-h-screen hero-bg pt-[72px]" />}>
             <ApplyContent />
         </Suspense>
     );
@@ -169,7 +169,7 @@ function ApplyContent() {
     };
 
     return (
-        <div className="min-h-screen hero-bg-dark" style={{ paddingTop: "72px" }}>
+        <div className="min-h-screen hero-bg" style={{ paddingTop: "72px" }}>
             {/* ── Progress Header ── */}
             <div className="sticky top-[72px] z-40 bg-[rgba(0,0,66,0.95)] backdrop-blur-md border-b border-[rgba(255,255,255,0.08)] py-4">
                 <div className="container-lp flex items-center justify-between">
@@ -212,10 +212,10 @@ function ApplyContent() {
                     <div className="animate-fade-up max-w-[800px] mx-auto">
                         <div className="text-center mb-10">
                             <span className="mono-label !text-[rgba(220,192,127,0.7)] mb-4 block">STEP 1 OF 2</span>
-                            <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-4 tracking-[-0.02em]">
+                            <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#000042] mb-4 tracking-[-0.02em]">
                                 What type of immigration <br />case do you need?
                             </h1>
-                            <p className="text-[#c2ddd8] text-[1.05rem] leading-relaxed max-w-[500px] mx-auto opacity-80">
+                            <p className="text-[#6b6b7e] text-[1.05rem] leading-relaxed max-w-[500px] mx-auto">
                                 Select a category and case type to generate your personalized document checklist.
                             </p>
                         </div>
@@ -229,9 +229,9 @@ function ApplyContent() {
                                         key={cat.id}
                                         onClick={() => { setSelectedCategory(cat.id); setSearchQuery(""); }}
                                         className={`text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 border
-                      ${selectedCategory === cat.id
-                                                ? 'bg-[rgba(216,178,61,0.1)] border-[rgba(216,178,61,0.4)] text-[#d8b23d]'
-                                                : 'bg-transparent border-transparent text-[#9d9daa] hover:bg-[rgba(255,255,255,0.04)] hover:text-white'
+                                      ${selectedCategory === cat.id
+                                                ? 'bg-[rgba(216,178,61,0.1)] border-[rgba(216,178,61,0.4)] text-[#b6912c]'
+                                                : 'bg-transparent border-transparent text-[#6b6b7e] hover:bg-[rgba(0,0,66,0.04)] hover:text-[#000042]'
                                             }`}
                                     >
                                         {cat.label}
@@ -245,12 +245,12 @@ function ApplyContent() {
                                     <>
                                         {/* Search */}
                                         <div className="relative mb-6">
-                                            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.3)]" />
+                                            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgba(0,0,66,0.3)]" />
                                             <Input
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                                 placeholder={`Search ${CATEGORIES.find(c => c.id === selectedCategory)?.label}...`}
-                                                className="pl-10 bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.1)] text-white focus:border-[#d8b23d]"
+                                                className="pl-10 bg-white border-[rgba(0,0,66,0.1)] text-[#000042] focus:border-[#d8b23d]"
                                             />
                                         </div>
 
@@ -259,26 +259,27 @@ function ApplyContent() {
                                             {filteredServices.length > 0 ? filteredServices.map((service, i) => (
                                                 <Card
                                                     key={i}
-                                                    className="bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.08)] p-5 cursor-pointer hover:bg-[rgba(216,178,61,0.04)] hover:border-[rgba(216,178,61,0.3)] transition-all duration-200 group flex items-center justify-between"
+                                                    variant="elevated"
+                                                    className="p-5 cursor-pointer hover:border-[rgba(216,178,61,0.3)] transition-all duration-200 group flex items-center justify-between"
                                                     onClick={() => handleServiceSelect(service)}
                                                 >
                                                     <div className="pr-4">
-                                                        <h3 className="text-white font-serif text-[1.1rem] font-bold tracking-tight mb-2 group-hover:text-[#d8b23d] transition-colors">
+                                                        <h3 className="text-[#000042] font-serif text-[1.1rem] font-bold tracking-tight mb-2 group-hover:text-[#b6912c] transition-colors">
                                                             {service.case_type}
                                                         </h3>
                                                         <div className="flex items-center gap-3 text-xs opacity-70">
-                                                            <Badge variant="info" className="!bg-[rgba(84,132,140,0.15)] !text-[#c2ddd8] !border-transparent">
+                                                            <Badge variant="info" className="!bg-[rgba(84,132,140,0.1)] !text-[#54848c] !border-transparent">
                                                                 {CATEGORIES.find(c => c.id === selectedCategory)?.label}
                                                             </Badge>
-                                                            <span className="text-[#9d9daa]">
+                                                            <span className="text-[#6b6b7e]">
                                                                 {service.attorney_fees_usd.starting_from && `From $${service.attorney_fees_usd.starting_from}`}
                                                                 {service.attorney_fees_usd.flat_fee && `Flat Fee: $${service.attorney_fees_usd.flat_fee}`}
                                                                 {service.attorney_fees_usd.hourly_rate && `$${service.attorney_fees_usd.hourly_rate}/hr`}
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <div className="w-8 h-8 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center group-hover:bg-[#d8b23d] transition-colors shrink-0">
-                                                        <ArrowRight size={14} className="text-[#9d9daa] group-hover:text-[#000042]" />
+                                                    <div className="w-8 h-8 rounded-full bg-[rgba(0,0,66,0.05)] flex items-center justify-center group-hover:bg-[#d8b23d] transition-colors shrink-0">
+                                                        <ArrowRight size={14} className="text-[#6b6b7e] group-hover:text-[#000042]" />
                                                     </div>
                                                 </Card>
                                             )) : (
@@ -289,10 +290,10 @@ function ApplyContent() {
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="h-full flex flex-col items-center justify-center py-20 border border-dashed border-[rgba(255,255,255,0.1)] rounded-xl bg-[rgba(255,255,255,0.01)] text-center px-6">
-                                        <FileText size={32} className="text-[rgba(255,255,255,0.1)] mb-4" />
-                                        <h3 className="text-white font-medium mb-1">Select a category</h3>
-                                        <p className="text-sm text-[#9d9daa]">Choose an immigration category from the left to view available services.</p>
+                                    <div className="h-full flex flex-col items-center justify-center py-20 border border-dashed border-[rgba(0,0,66,0.1)] rounded-xl bg-[rgba(0,0,66,0.02)] text-center px-6">
+                                        <FileText size={32} className="text-[rgba(0,0,66,0.2)] mb-4" />
+                                        <h3 className="text-[#000042] font-medium mb-1">Select a category</h3>
+                                        <p className="text-sm text-[#6b6b7e]">Choose an immigration category from the left to view available services.</p>
                                     </div>
                                 )}
                             </div>
@@ -313,34 +314,34 @@ function ApplyContent() {
                         </button>
 
                         {/* Case Info Card */}
-                        <Card className="bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.08)] p-6 md:p-8 mb-8 backdrop-blur-sm">
+                        <Card variant="elevated" className="p-6 md:p-8 mb-8 backdrop-blur-sm">
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                                 <div>
-                                    <h1 className="text-3xl md:text-4xl font-serif font-bold text-white mb-2 tracking-[-0.03em]">
+                                    <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#000042] mb-2 tracking-[-0.03em]">
                                         {selectedService.case_type}
                                     </h1>
                                     <div className="flex items-center gap-2">
-                                        <Badge variant="teal">
+                                        <Badge variant="info" className="!bg-[rgba(84,132,140,0.1)] !text-[#54848c]">
                                             {CATEGORIES.find(c => c.id === selectedCategory)?.label}
                                         </Badge>
-                                        <span className="text-[#9d9daa] text-[0.85rem] font-medium">
+                                        <span className="text-[#6b6b7e] text-[0.85rem] font-medium">
                                             Case ID: {sessionId?.slice(0, 8).toUpperCase()}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-2">
-                                    <div className="flex items-center gap-2 bg-[rgba(216,178,61,0.1)] text-[#d8b23d] px-3 py-1.5 rounded-full border border-[rgba(216,178,61,0.2)]">
+                                    <div className="flex items-center gap-2 bg-[rgba(216,178,61,0.1)] text-[#b6912c] px-3 py-1.5 rounded-full border border-[rgba(216,178,61,0.2)]">
                                         <Shield size={14} />
                                         <span className="text-[0.75rem] font-bold uppercase tracking-wider">Secure Upload</span>
                                     </div>
-                                    <span className="text-[0.7rem] text-[#9d9daa] opacity-60 italic">Your data is encrypted in transit</span>
+                                    <span className="text-[0.7rem] text-[#6b6b7e] italic">Your data is encrypted in transit</span>
                                 </div>
                             </div>
                         </Card>
 
                         {/* Document Checklist */}
-                        <h2 className="text-2xl font-serif font-bold text-white mb-2">Required Documentation</h2>
-                        <p className="text-[#9d9daa] text-[0.95rem] mb-8 leading-relaxed max-w-[600px]">
+                        <h2 className="text-2xl font-serif font-bold text-[#000042] mb-2">Required Documentation</h2>
+                        <p className="text-[#6b6b7e] text-[0.95rem] mb-8 leading-relaxed max-w-[600px]">
                             To provide the best legal strategy, please provide clear, original-quality digital copies (PDF or high-res JPG) of the items below.
                         </p>
 
@@ -350,7 +351,7 @@ function ApplyContent() {
                                 <span>Upload Progress</span>
                                 <span>{progressCount > 0 ? `${Math.floor(progressPercent)}%` : '0%'}</span>
                             </div>
-                            <Progress value={progressPercent} showValue={false} variant="gold" className="h-2 bg-[rgba(255,255,255,0.1)]" />
+                            <Progress value={progressPercent} showValue={false} variant="gold" className="h-2 bg-[rgba(0,0,66,0.1)]" />
                         </div>
 
                         {/* Document List */}
@@ -359,25 +360,25 @@ function ApplyContent() {
                                 <Card
                                     key={doc.id}
                                     className={`border transition-all duration-300 ${doc.uploaded
-                                        ? 'bg-[rgba(216,178,61,0.03)] border-[rgba(216,178,61,0.3)]'
-                                        : 'bg-transparent border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)]'
+                                        ? 'bg-[rgba(216,178,61,0.05)] border-[rgba(216,178,61,0.3)]'
+                                        : 'bg-white border-[rgba(0,0,66,0.1)] hover:border-[rgba(0,0,66,0.2)] shadow-sm'
                                         }`}
                                 >
                                     <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                         <div className="flex items-start gap-4">
                                             <div className="mt-0.5">
                                                 {doc.uploaded ? (
-                                                    <CheckCircle2 size={20} className="text-[#d8b23d]" />
+                                                    <CheckCircle2 size={20} className="text-[#b6912c]" />
                                                 ) : (
-                                                    <div className="w-5 h-5 rounded-full border border-[rgba(255,255,255,0.2)] flex items-center justify-center text-[9px] text-[#9d9daa] font-bold">
+                                                    <div className="w-5 h-5 rounded-full border border-[rgba(0,0,66,0.2)] flex items-center justify-center text-[9px] text-[#6b6b7e] font-bold">
                                                         !
                                                     </div>
                                                 )}
                                             </div>
                                             <div>
-                                                <h4 className="text-[0.95rem] font-bold text-white mb-1">{doc.name}</h4>
+                                                <h4 className="text-[0.95rem] font-bold text-[#000042] mb-1">{doc.name}</h4>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[0.8rem] text-[#9d9daa]">Requirement: {doc.requiredType}</span>
+                                                    <span className="text-[0.8rem] text-[#6b6b7e]">Requirement: {doc.requiredType}</span>
                                                     {doc.uploaded && <Badge variant="gold" className="text-[0.65rem] !py-0.5 !px-1.5 h-auto leading-none">Uploaded</Badge>}
                                                 </div>
                                             </div>
@@ -389,7 +390,7 @@ function ApplyContent() {
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => handleRemove(doc.id)}
-                                                    className="text-[#9d9daa] hover:text-[#ff5c5c] hover:bg-[rgba(255,92,92,0.1)] text-xs h-8"
+                                                    className="text-[#6b6b7e] hover:text-[#ff5c5c] hover:bg-[rgba(255,92,92,0.1)] text-xs h-8"
                                                 >
                                                     <X size={13} className="mr-1.5" /> Remove
                                                 </Button>
@@ -408,7 +409,7 @@ function ApplyContent() {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="text-white border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)] w-full md:w-auto h-9"
+                                                        className="text-[#000042] border-[rgba(0,0,66,0.2)] hover:bg-[rgba(0,0,66,0.05)] w-full md:w-auto h-9"
                                                         onClick={() => document.getElementById(doc.id)?.click()}
                                                     >
                                                         <UploadCloud size={14} className="mr-2" />
@@ -423,10 +424,10 @@ function ApplyContent() {
                         </div>
 
                         {/* Bottom Disclaimer + Next Step */}
-                        <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl bg-[rgba(0,0,0,0.2)] border border-[rgba(255,255,255,0.05)]">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl bg-white border border-[rgba(0,0,66,0.1)] shadow-sm">
                             <div className="flex items-start gap-3">
                                 <Shield size={20} className="text-[#54848c] shrink-0 mt-0.5" />
-                                <p className="text-[0.85rem] text-[#9d9daa] leading-relaxed max-w-[400px]">
+                                <p className="text-[0.85rem] text-[#6b6b7e] leading-relaxed max-w-[400px]">
                                     Your files are encrypted securely via TLS. In the next step, you will crerate your client portal account to officially submit your application and track progress.
                                 </p>
                             </div>
